@@ -4,7 +4,7 @@
   "type": "component",
   "vendor": "klucon",
   "extension_id": "klucon/com_filesmanager",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "display_name": "Správce souborů",
   "display_name_key": "extensions.name.com_filesmanager",
   "description": "Profesionální správce souborů s kategoriemi, katalogem souborů, statistikami stažení, veřejnými detail stránkami a menu integrací.",

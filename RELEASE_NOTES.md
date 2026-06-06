@@ -1,6 +1,6 @@
-# v0.1.1
+# v0.1.2
 
-Changes since `v0.1.0`:
+Changes since `v0.1.1`:
 
-- ci: automate release versioning
-- refactor: harden filesmanager operations
+- fix: add sqlalchemy runtime dependency
+- feat: turn filesmanager into download catalog
