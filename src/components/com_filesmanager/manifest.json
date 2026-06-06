@@ -4,7 +4,7 @@
   "type": "component",
   "vendor": "klucon",
   "extension_id": "klucon/com_filesmanager",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "display_name": "Správce souborů",
   "display_name_key": "extensions.name.com_filesmanager",
   "description": "Moderní správce souborů: procházení, upload, přesun, kopírování, koš, hledání, náhledy, ZIP, textový editor, sdílecí odkazy a audit log.",
