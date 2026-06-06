@@ -7,7 +7,9 @@ name = "com_filesmanager"
 version = "0.1.1"
 description = "Moderní správce souborů pro KLUCON CMS"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "SQLAlchemy>=2.0",
+]
 
 [project.optional-dependencies]
 dev = [
