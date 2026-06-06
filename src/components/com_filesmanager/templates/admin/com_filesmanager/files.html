@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.files.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.files.heading') }}{% endblock %}
+{% block topbar_actions %}
+<div class="btn-group btn-group-sm" role="group">
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.admin.nav.overview') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/categories">{{ ct('com_filesmanager.admin.nav.categories') }}</a>
+  <a class="btn btn-primary" href="/admin/com_filesmanager/files/new">{{ ct('com_filesmanager.action.new_file') }}</a>
+</div>
+{% endblock %}
+{% block content %}
+{% if flash %}<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">{{ flash.text }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button></div>{% endif %}
+<form method="get" class="row g-3 mb-3">
+  <div class="col-12 col-md-4">
+    <select class="form-select" name="category_id" onchange="this.form.submit()">
+      <option value="">{{ ct('com_filesmanager.filter.all_categories') }}</option>
+      {% for category in categories %}
+      <option value="{{ category.id }}" {% if selected_category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>{{ ct('com_filesmanager.col.name') }}</th><th>{{ ct('com_filesmanager.col.category') }}</th><th>{{ ct('com_filesmanager.col.size') }}</th><th>{{ ct('com_filesmanager.col.downloads') }}</th><th>{{ ct('com_filesmanager.col.status') }}</th><th class="text-end">{{ ct('com_filesmanager.col.actions') }}</th></tr></thead>
+      <tbody>
+      {% for item in rows %}
+      <tr>
+        <td><div class="fw-medium">{{ item.title }}</div><div class="text-muted small">{{ item.original_filename }}</div></td>
+        <td>{% for category in categories %}{% if category.id == item.category_id %}{{ category.name }}{% endif %}{% endfor %}</td>
+        <td>{{ human_size(item.file_size) }}</td>
+        <td>{{ item.download_count }}</td>
+        <td>{% if item.is_published %}<span class="badge bg-success">{{ ct('com_filesmanager.status.published') }}</span>{% else %}<span class="badge bg-secondary">{{ ct('com_filesmanager.status.draft') }}</span>{% endif %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary" href="/filesmanager/file/{{ item.slug }}" target="_blank" rel="noopener">{{ ct('com_filesmanager.action.preview') }}</a>
+          <a class="btn btn-sm btn-outline-secondary" href="/admin/com_filesmanager/files/{{ item.id }}/edit">{{ ct('com_filesmanager.action.edit') }}</a>
+          <form method="post" action="/admin/com_filesmanager/files/{{ item.id }}/delete" class="d-inline" onsubmit="return confirm('{{ ct('com_filesmanager.confirm.delete_file') }}');">
+            <button class="btn btn-sm btn-outline-danger" type="submit">{{ ct('com_filesmanager.action.delete') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.files') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

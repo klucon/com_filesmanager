@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.categories.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.categories.heading') }}{% endblock %}
+{% block topbar_actions %}
+<div class="btn-group btn-group-sm" role="group">
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.admin.nav.overview') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/files">{{ ct('com_filesmanager.admin.nav.files') }}</a>
+  <a class="btn btn-primary" href="/admin/com_filesmanager/categories/new">{{ ct('com_filesmanager.action.new_category') }}</a>
+</div>
+{% endblock %}
+{% block content %}
+{% if flash %}<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">{{ flash.text }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button></div>{% endif %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead><tr><th>{{ ct('com_filesmanager.col.name') }}</th><th>{{ ct('com_filesmanager.col.slug') }}</th><th>{{ ct('com_filesmanager.col.status') }}</th><th class="text-end">{{ ct('com_filesmanager.col.actions') }}</th></tr></thead>
+      <tbody>
+      {% for item in rows %}
+      <tr>
+        <td><span class="me-2"><i class="bi bi-{{ item.icon or 'folder' }}"></i></span>{{ item.name }}{% if item.description %}<div class="text-muted small">{{ item.description }}</div>{% endif %}</td>
+        <td><code>{{ item.slug }}</code></td>
+        <td>{% if item.is_active %}<span class="badge bg-success">{{ ct('com_filesmanager.status.active') }}</span>{% else %}<span class="badge bg-secondary">{{ ct('com_filesmanager.status.inactive') }}</span>{% endif %}</td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-secondary" href="/admin/com_filesmanager/categories/{{ item.id }}/edit">{{ ct('com_filesmanager.action.edit') }}</a>
+          <form method="post" action="/admin/com_filesmanager/categories/{{ item.id }}/delete" class="d-inline" onsubmit="return confirm('{{ ct('com_filesmanager.confirm.delete_category') }}');">
+            <button class="btn btn-sm btn-outline-danger" type="submit">{{ ct('com_filesmanager.action.delete') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.categories') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

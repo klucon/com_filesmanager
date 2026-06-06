@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.admin.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.admin.heading') }}{% endblock %}
+{% block topbar_actions %}
+<div class="btn-group btn-group-sm" role="group">
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.admin.nav.overview') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/categories">{{ ct('com_filesmanager.admin.nav.categories') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/files">{{ ct('com_filesmanager.admin.nav.files') }}</a>
+</div>
+{% endblock %}
+{% block content %}
+{% if flash %}<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">{{ flash.text }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button></div>{% endif %}
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">{{ ct('com_filesmanager.stats.files') }}</div><div class="display-6">{{ stats.files_total }}</div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">{{ ct('com_filesmanager.stats.categories') }}</div><div class="display-6">{{ stats.categories_total }}</div></div></div></div>
+  <div class="col-12 col-md-4"><div class="card h-100"><div class="card-body"><div class="text-muted small">{{ ct('com_filesmanager.stats.downloads') }}</div><div class="display-6">{{ stats.downloads_total }}</div></div></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-12 col-xl-7">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ ct('com_filesmanager.recent.heading') }}</strong>
+        <a href="/admin/com_filesmanager/files" class="btn btn-sm btn-primary">{{ ct('com_filesmanager.action.manage_files') }}</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>{{ ct('com_filesmanager.col.name') }}</th><th>{{ ct('com_filesmanager.col.downloads') }}</th><th>{{ ct('com_filesmanager.col.status') }}</th></tr></thead>
+          <tbody>
+          {% for item in recent %}
+          <tr>
+            <td><a href="/admin/com_filesmanager/files/{{ item.id }}/edit">{{ item.title }}</a><div class="text-muted small">{{ item.original_filename }}</div></td>
+            <td>{{ item.download_count }}</td>
+            <td>{% if item.is_published %}<span class="badge bg-success">{{ ct('com_filesmanager.status.published') }}</span>{% else %}<span class="badge bg-secondary">{{ ct('com_filesmanager.status.draft') }}</span>{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.files') }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-xl-5">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ ct('com_filesmanager.categories.heading') }}</strong>
+        <a href="/admin/com_filesmanager/categories/new" class="btn btn-sm btn-primary">{{ ct('com_filesmanager.action.new_category') }}</a>
+      </div>
+      <div class="list-group list-group-flush">
+        {% for category in categories %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div><div class="fw-medium">{{ category.name }}</div><div class="text-muted small">{{ category.slug }}</div></div>
+          {% if category.is_active %}<span class="badge bg-success">{{ ct('com_filesmanager.status.active') }}</span>{% else %}<span class="badge bg-secondary">{{ ct('com_filesmanager.status.inactive') }}</span>{% endif %}
+        </div>
+        {% else %}
+        <div class="list-group-item text-muted">{{ ct('com_filesmanager.empty.categories') }}</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }}{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width: 860px;">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/filesmanager">{{ ct('com_filesmanager.web.breadcrumb.library') }}</a></li>
+      {% if category %}<li class="breadcrumb-item"><a href="/filesmanager/category/{{ category.slug }}">{{ category.name }}</a></li>{% endif %}
+      <li class="breadcrumb-item active" aria-current="page">{{ item.title }}</li>
+    </ol>
+  </nav>
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4 p-lg-5">
+      <div class="d-flex flex-column flex-lg-row justify-content-between gap-4 mb-4">
+        <div><h1 class="mb-2">{{ item.title }}</h1><div class="text-muted">{{ item.original_filename }}</div></div>
+        <div class="text-lg-end"><div class="text-muted small">{{ ct('com_filesmanager.col.downloads') }}</div><div class="fs-4 fw-semibold">{{ item.download_count }}</div></div>
+      </div>
+      {% if item.description %}<div class="mb-4"><p class="lead mb-0">{{ item.description }}</p></div>{% endif %}
+      <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6"><div class="border rounded p-3"><div class="text-muted small">{{ ct('com_filesmanager.col.size') }}</div><div class="fw-semibold">{{ human_size(item.file_size) }}</div></div></div>
+        <div class="col-12 col-md-6"><div class="border rounded p-3"><div class="text-muted small">{{ ct('com_filesmanager.col.category') }}</div><div class="fw-semibold">{{ category.name if category else ct('com_filesmanager.filter.no_category') }}</div></div></div>
+        <div class="col-12 col-md-6"><div class="border rounded p-3"><div class="text-muted small">{{ ct('com_filesmanager.col.mime') }}</div><div class="fw-semibold">{{ item.mime_type }}</div></div></div>
+        <div class="col-12 col-md-6"><div class="border rounded p-3"><div class="text-muted small">{{ ct('com_filesmanager.col.created') }}</div><div class="fw-semibold">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</div></div></div>
+      </div>
+      <div class="d-flex gap-2"><a href="/filesmanager/download/{{ item.slug }}" class="btn btn-primary btn-lg">{{ ct('com_filesmanager.action.download') }}</a><a href="/filesmanager" class="btn btn-outline-secondary btn-lg">{{ ct('com_filesmanager.action.back') }}</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

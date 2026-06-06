@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from .models import FileAuditLog, FileShare
+from .models import FileAuditLog, FileCategory, FileShare, ManagedFile
 
-_TABLES_DROP_ORDER = [
-    FileAuditLog.__table__,
+_TABLES_CREATE_ORDER = [
+    FileCategory.__table__,
+    ManagedFile.__table__,
     FileShare.__table__,
+    FileAuditLog.__table__,
 ]
 
-_TABLES_CREATE_ORDER = list(reversed(_TABLES_DROP_ORDER))
+_TABLES_DROP_ORDER = list(reversed(_TABLES_CREATE_ORDER))
 
 
 async def upgrade_schema(engine: object) -> None:

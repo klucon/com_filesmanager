@@ -7,7 +7,7 @@
   "version": "0.1.1",
   "display_name": "Správce souborů",
   "display_name_key": "extensions.name.com_filesmanager",
-  "description": "Moderní správce souborů: procházení, upload, přesun, kopírování, koš, hledání, náhledy, ZIP, textový editor, sdílecí odkazy a audit log.",
+  "description": "Profesionální správce souborů s kategoriemi, katalogem souborů, statistikami stažení, veřejnými detail stránkami a menu integrací.",
   "license": "MIT",
   "author": {
     "name": "KLUCON",
@@ -32,7 +32,7 @@
     "setup_function": "setup",
     "admin_router": "admin.router",
     "web_views": [],
-    "settings_url": "/admin/com_filesmanager"
+    "settings_url": "/admin/com_filesmanager/files"
   },
   "permissions": [
     {
@@ -58,6 +58,10 @@
     {
       "key": "filesmanager.share",
       "label": "permissions.filesmanager.share"
+    },
+    {
+      "key": "filesmanager.download",
+      "label": "permissions.filesmanager.download"
     }
   ],
   "i18n": {
@@ -75,8 +79,10 @@
   "security": {
     "requires_signature": true,
     "capabilities": [
+      "database.write",
       "filesystem.write",
-      "admin.routes"
+      "admin.routes",
+      "web.views"
     ]
   },
   "marketplace": {
@@ -93,8 +99,8 @@
   "dashboard": {
     "quick_icon": {
       "enabled": true,
-      "label": "Soubory",
-      "description": "Procházení, upload, koš, sdílení a editor souborů.",
+      "label": "Správce souborů",
+      "description": "Kategorie, soubory, statistiky stažení a veřejný katalog.",
       "icon": "folder",
       "url": "/admin/com_filesmanager",
       "order": 140
@@ -108,7 +114,7 @@
     "cs_CZ",
     "en_GB"
   ],
-  "changelog": "První vydání: procházení, upload (drag&drop), přesun/kopírování, koš s obnovou, hledání, náhledy obrázků a PDF, ZIP/rozbalení, textový editor, sdílecí odkazy s expirací a audit log. ACL na úrovni rolí.",
+  "changelog": "Komponenta nyní funguje jako katalogový správce souborů s kategoriemi, statistikami stažení, veřejnými detail stránkami a menu typy.",
   "routes": {
     "admin": {
       "enabled": true,
