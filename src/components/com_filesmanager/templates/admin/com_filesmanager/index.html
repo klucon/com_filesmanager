@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% set cur = listing.rel_dir %}
+{% block title %}{{ ct('com_filesmanager.admin.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.admin.heading') }}{% endblock %}
+
+{% block topbar_actions %}
+<div class="btn-group btn-group-sm" role="group">
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.nav.files') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/trash">{{ ct('com_filesmanager.nav.trash') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/shares">{{ ct('com_filesmanager.nav.shares') }}</a>
+  <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/audit">{{ ct('com_filesmanager.nav.audit') }}</a>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">
+  {{ flash.text }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button>
+</div>
+{% endif %}
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <nav aria-label="breadcrumb" class="flex-grow-1">
+    <ol class="breadcrumb mb-0">
+      {% for crumb in listing.breadcrumbs %}
+      {% if loop.last %}
+      <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+      {% else %}
+      <li class="breadcrumb-item"><a href="?dir={{ crumb.rel | urlencode }}">{{ crumb.name }}</a></li>
+      {% endif %}
+      {% endfor %}
+    </ol>
+  </nav>
+  <form class="d-flex" method="get" action="/admin/com_filesmanager" role="search">
+    <input type="hidden" name="dir" value="{{ cur }}">
+    <input class="form-control form-control-sm me-2" type="search" name="q" value="{{ query }}"
+           placeholder="{{ ct('com_filesmanager.label.search_placeholder') }}" aria-label="{{ ct('com_filesmanager.action.search') }}">
+    <button class="btn btn-sm btn-outline-primary" type="submit">{{ ct('com_filesmanager.action.search') }}</button>
+  </form>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#fmNewFolder">
+    <i class="bi bi-folder-plus"></i> {{ ct('com_filesmanager.action.new_folder') }}</button>
+  <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#fmUpload">
+    <i class="bi bi-upload"></i> {{ ct('com_filesmanager.action.upload') }}</button>
+</div>
+
+{% if search_results is not none %}
+<p class="text-muted">{{ ct('com_filesmanager.text.search_results', query=query) }}</p>
+{% endif %}
+
+<form id="fm-form" method="post">
+  <input type="hidden" name="dir" value="{{ cur }}">
+
+  <div class="card mb-3">
+    <div class="card-body py-2 d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted small me-2">{{ ct('com_filesmanager.action.with_selected') }}:</span>
+      <button class="btn btn-sm btn-outline-secondary" type="submit" formaction="/admin/com_filesmanager/move"
+              data-bs-toggle="modal" data-bs-target="#fmMove" formnovalidate
+              onclick="event.preventDefault(); fmOpenWithSelection('#fmMove');">{{ ct('com_filesmanager.action.move') }}</button>
+      <button class="btn btn-sm btn-outline-secondary" type="button"
+              onclick="fmOpenWithSelection('#fmCopy');">{{ ct('com_filesmanager.action.copy') }}</button>
+      <button class="btn btn-sm btn-outline-secondary" type="button"
+              onclick="fmOpenWithSelection('#fmZip');">{{ ct('com_filesmanager.action.zip') }}</button>
+      <button class="btn btn-sm btn-outline-danger" type="submit" formaction="/admin/com_filesmanager/delete"
+              onclick="return confirm('{{ ct('com_filesmanager.confirm.delete') }}');">{{ ct('com_filesmanager.action.delete') }}</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <caption class="visually-hidden">{{ ct('com_filesmanager.admin.heading') }}</caption>
+        <thead>
+        <tr>
+          <th scope="col" style="width:2.5rem"><input class="form-check-input" type="checkbox" onclick="fmToggleAll(this)" aria-label="select all"></th>
+          <th scope="col">{{ ct('com_filesmanager.col.name') }}</th>
+          <th scope="col">{{ ct('com_filesmanager.col.size') }}</th>
+          <th scope="col">{{ ct('com_filesmanager.col.modified') }}</th>
+          <th scope="col" class="text-end">{{ ct('com_filesmanager.col.actions') }}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% set rows = search_results if search_results is not none else listing.entries %}
+        {% for e in rows %}
+        <tr>
+          <td><input class="form-check-input fm-check" type="checkbox" name="paths" value="{{ e.rel_path }}" aria-label="{{ e.name }}"></td>
+          <td>
+            {% if e.is_dir %}
+            <i class="bi bi-folder-fill text-warning"></i>
+            <a href="?dir={{ e.rel_path | urlencode }}" class="fw-medium text-decoration-none">{{ e.name }}</a>
+            {% else %}
+            <i class="bi bi-file-earmark{% if e.is_image %}-image{% elif e.is_archive %}-zip{% elif e.is_text %}-text{% endif %}"></i>
+            <span>{{ e.name }}</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{% if not e.is_dir %}{{ human_size(e.size) }}{% else %}—{% endif %}</td>
+          <td class="text-muted small">{{ e.modified | int }}</td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              {% if not e.is_dir %}
+              <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/download?path={{ e.rel_path | urlencode }}" title="{{ ct('com_filesmanager.action.download') }}"><i class="bi bi-download"></i></a>
+              {% if e.can_preview %}
+              <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/preview?path={{ e.rel_path | urlencode }}" target="_blank" rel="noopener" title="{{ ct('com_filesmanager.action.preview') }}"><i class="bi bi-eye"></i></a>
+              {% endif %}
+              {% if e.is_text %}
+              <a class="btn btn-outline-secondary" href="/admin/com_filesmanager/editor?path={{ e.rel_path | urlencode }}" title="{{ ct('com_filesmanager.action.edit') }}"><i class="bi bi-pencil"></i></a>
+              {% endif %}
+              {% if e.is_archive %}
+              <button class="btn btn-outline-secondary" type="button" title="{{ ct('com_filesmanager.action.unzip') }}"
+                      onclick="fmSubmitSingle('/admin/com_filesmanager/unzip','{{ e.rel_path }}');"><i class="bi bi-file-zip"></i></button>
+              {% endif %}
+              <button class="btn btn-outline-secondary" type="button" title="{{ ct('com_filesmanager.action.share') }}"
+                      onclick="fmShare('{{ e.rel_path }}');"><i class="bi bi-share"></i></button>
+              {% endif %}
+              <button class="btn btn-outline-secondary" type="button" title="{{ ct('com_filesmanager.action.rename') }}"
+                      onclick="fmRename('{{ e.rel_path }}','{{ e.name }}');"><i class="bi bi-input-cursor-text"></i></button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-center text-muted py-4">
+          {{ ct('com_filesmanager.empty.search') if search_results is not none else ct('com_filesmanager.empty.dir') }}
+        </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if search_results is none %}
+    <div class="card-footer text-muted small">
+      {{ ct('com_filesmanager.text.items_summary', dirs=listing.dir_count, files=listing.file_count, size=human_size(listing.total_size)) }}
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+{# ---------- Modály ---------- #}
+{% include "admin/com_filesmanager/_modals.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fmCurrentDir() { return {{ cur | tojson }}; }
+function fmToggleAll(box) {
+  document.querySelectorAll('.fm-check').forEach(c => c.checked = box.checked);
+}
+function fmSelected() {
+  return Array.from(document.querySelectorAll('.fm-check:checked')).map(c => c.value);
+}
+function fmInjectSelection(formSel) {
+  const form = document.querySelector(formSel);
+  form.querySelectorAll('input[data-fm-sel="1"]').forEach(n => n.remove());
+  fmSelected().forEach(v => {
+    const i = document.createElement('input');
+    i.type = 'hidden'; i.name = 'paths'; i.value = v; i.dataset.fmSel = '1';
+    form.appendChild(i);
+  });
+}
+function fmOpenWithSelection(modalSel) {
+  if (fmSelected().length === 0) { return; }
+  const formSel = modalSel + ' form';
+  fmInjectSelection(formSel);
+  new bootstrap.Modal(document.querySelector(modalSel)).show();
+}
+function fmSubmitSingle(action, path) {
+  const f = document.createElement('form');
+  f.method = 'post'; f.action = action;
+  f.innerHTML = '<input type="hidden" name="dir" value="' + fmCurrentDir() + '">' +
+                '<input type="hidden" name="path" value="' + path + '">';
+  document.body.appendChild(f); f.submit();
+}
+function fmRename(path, name) {
+  const m = document.querySelector('#fmRename');
+  m.querySelector('[name=path]').value = path;
+  m.querySelector('[name=new_name]').value = name;
+  new bootstrap.Modal(m).show();
+}
+function fmShare(path) {
+  const m = document.querySelector('#fmShare');
+  m.querySelector('[name=path]').value = path;
+  new bootstrap.Modal(m).show();
+}
+// Drag & drop upload
+(function () {
+  const zone = document.querySelector('#fm-dropzone');
+  const input = document.querySelector('#fm-upload-input');
+  if (!zone || !input) return;
+  zone.addEventListener('click', () => input.click());
+  ['dragover', 'dragenter'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.add('border-primary');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.remove('border-primary');
+  }));
+  zone.addEventListener('drop', e => { input.files = e.dataTransfer.files; });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.audit.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.audit.heading') }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-sm btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.nav.files') }}</a>
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">
+  {{ flash.text }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0">
+      <caption class="visually-hidden">{{ ct('com_filesmanager.audit.heading') }}</caption>
+      <thead>
+      <tr>
+        <th scope="col">{{ ct('com_filesmanager.audit.col.time') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.audit.col.user') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.audit.col.action') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.audit.col.target') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.audit.col.detail') }}</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+      <tr>
+        <td class="small text-muted">{{ r.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        <td class="small">{{ r.username }}</td>
+        <td><span class="badge bg-light text-dark">{{ r.action }}</span></td>
+        <td class="small">{{ r.target }}</td>
+        <td class="small text-muted">{{ r.detail }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.audit') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

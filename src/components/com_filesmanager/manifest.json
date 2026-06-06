@@ -1,0 +1,126 @@
+{
+  "schema_version": "1.0",
+  "name": "com_filesmanager",
+  "type": "component",
+  "vendor": "klucon",
+  "extension_id": "klucon/com_filesmanager",
+  "version": "0.1.0",
+  "display_name": "Správce souborů",
+  "display_name_key": "extensions.name.com_filesmanager",
+  "description": "Moderní správce souborů: procházení, upload, přesun, kopírování, koš, hledání, náhledy, ZIP, textový editor, sdílecí odkazy a audit log.",
+  "license": "MIT",
+  "author": {
+    "name": "KLUCON",
+    "url": "https://klucon.cz"
+  },
+  "links": {
+    "homepage": "https://marketplace.klucon.cz",
+    "repository": "https://github.com/klucon/com_filesmanager"
+  },
+  "compatibility": {
+    "core_min": "0.1.0",
+    "core_max": null,
+    "python": ">=3.12",
+    "database": [
+      "mysql",
+      "postgresql"
+    ]
+  },
+  "package": {
+    "python_package": "com_filesmanager",
+    "entrypoint": "src.components.com_filesmanager",
+    "setup_function": "setup",
+    "admin_router": "admin.router",
+    "web_views": [],
+    "settings_url": "/admin/com_filesmanager"
+  },
+  "permissions": [
+    {
+      "key": "filesmanager.view",
+      "label": "permissions.filesmanager.view"
+    },
+    {
+      "key": "filesmanager.manage",
+      "label": "permissions.filesmanager.manage"
+    },
+    {
+      "key": "filesmanager.upload",
+      "label": "permissions.filesmanager.upload"
+    },
+    {
+      "key": "filesmanager.delete",
+      "label": "permissions.filesmanager.delete"
+    },
+    {
+      "key": "filesmanager.edit",
+      "label": "permissions.filesmanager.edit"
+    },
+    {
+      "key": "filesmanager.share",
+      "label": "permissions.filesmanager.share"
+    }
+  ],
+  "i18n": {
+    "domain": "com_filesmanager",
+    "locales_path": "i18n",
+    "required_locales": [
+      "cs_CZ",
+      "en_GB"
+    ]
+  },
+  "migrations": {
+    "enabled": false,
+    "path": "migrations"
+  },
+  "security": {
+    "requires_signature": true,
+    "capabilities": [
+      "filesystem.write",
+      "admin.routes"
+    ]
+  },
+  "marketplace": {
+    "category": "media",
+    "tags": [
+      "files",
+      "filemanager",
+      "media",
+      "storage",
+      "upload"
+    ],
+    "featured": false
+  },
+  "dashboard": {
+    "quick_icon": {
+      "enabled": true,
+      "label": "Soubory",
+      "description": "Procházení, upload, koš, sdílení a editor souborů.",
+      "icon": "folder",
+      "url": "/admin/com_filesmanager",
+      "order": 140
+    }
+  },
+  "min_cms_version": "0.1.0",
+  "categories": [
+    "media"
+  ],
+  "supported_locales": [
+    "cs_CZ",
+    "en_GB"
+  ],
+  "changelog": "První vydání: procházení, upload (drag&drop), přesun/kopírování, koš s obnovou, hledání, náhledy obrázků a PDF, ZIP/rozbalení, textový editor, sdílecí odkazy s expirací a audit log. ACL na úrovni rolí.",
+  "routes": {
+    "admin": {
+      "enabled": true,
+      "prefix": "/admin/com_filesmanager",
+      "nav_label": "extensions.name.com_filesmanager",
+      "nav_icon": "folder",
+      "nav_order": 140
+    },
+    "web": {
+      "enabled": true,
+      "prefix": "/filesmanager"
+    }
+  },
+  "admin_url": "/admin/com_filesmanager"
+}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.trash.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.trash.heading') }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-sm btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.nav.files') }}</a>
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">
+  {{ flash.text }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button>
+</div>
+{% endif %}
+
+{% if items %}
+<form method="post" action="/admin/com_filesmanager/trash/empty" class="mb-3"
+      onsubmit="return confirm('{{ ct('com_filesmanager.confirm.empty_trash') }}');">
+  <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-trash"></i> {{ ct('com_filesmanager.action.empty_trash') }}</button>
+</form>
+{% endif %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <caption class="visually-hidden">{{ ct('com_filesmanager.trash.heading') }}</caption>
+      <thead>
+      <tr>
+        <th scope="col">{{ ct('com_filesmanager.col.name') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.trash.col.original') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.trash.col.deleted') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.col.size') }}</th>
+        <th scope="col" class="text-end">{{ ct('com_filesmanager.col.actions') }}</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for item in items %}
+      <tr>
+        <td>
+          {% if item.is_dir %}<i class="bi bi-folder-fill text-warning"></i>{% else %}<i class="bi bi-file-earmark"></i>{% endif %}
+          {{ item.name }}
+        </td>
+        <td class="text-muted small">{{ item.original_rel }}</td>
+        <td class="text-muted small">{{ item.deleted_at }}</td>
+        <td class="text-muted small">{{ human_size(item.size) }}</td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm">
+            <form method="post" action="/admin/com_filesmanager/trash/restore" class="d-inline">
+              <input type="hidden" name="trash_id" value="{{ item.trash_id }}">
+              <button class="btn btn-outline-success" type="submit"><i class="bi bi-arrow-counterclockwise"></i> {{ ct('com_filesmanager.action.restore') }}</button>
+            </form>
+            <form method="post" action="/admin/com_filesmanager/trash/delete" class="d-inline"
+                  onsubmit="return confirm('{{ ct('com_filesmanager.confirm.purge') }}');">
+              <input type="hidden" name="trash_id" value="{{ item.trash_id }}">
+              <button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-lg"></i> {{ ct('com_filesmanager.action.purge') }}</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.trash') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

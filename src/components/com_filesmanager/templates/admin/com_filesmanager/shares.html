@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.shares.heading') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.shares.heading') }}{% endblock %}
+
+{% block topbar_actions %}
+<a class="btn btn-sm btn-outline-secondary" href="/admin/com_filesmanager">{{ ct('com_filesmanager.nav.files') }}</a>
+{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">
+  {{ flash.text }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <caption class="visually-hidden">{{ ct('com_filesmanager.shares.heading') }}</caption>
+      <thead>
+      <tr>
+        <th scope="col">{{ ct('com_filesmanager.shares.col.file') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.shares.col.link') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.shares.col.expires') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.shares.col.downloads') }}</th>
+        <th scope="col">{{ ct('com_filesmanager.shares.col.status') }}</th>
+        <th scope="col" class="text-end">{{ ct('com_filesmanager.col.actions') }}</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for s in shares %}
+      <tr>
+        <td class="small">{{ s.rel_path }}{% if s.note %}<div class="text-muted">{{ s.note }}</div>{% endif %}</td>
+        <td class="small">
+          <code>/filesmanager/share/{{ s.token }}</code>
+          <button class="btn btn-sm btn-outline-secondary ms-1" type="button"
+                  onclick="navigator.clipboard.writeText(location.origin + '/filesmanager/share/{{ s.token }}')">
+            <i class="bi bi-clipboard"></i></button>
+        </td>
+        <td class="small">{% if s.expires_at %}{{ s.expires_at.strftime('%Y-%m-%d %H:%M') }}{% else %}{{ ct('com_filesmanager.shares.never') }}{% endif %}</td>
+        <td class="small">{{ s.download_count }}{% if s.max_downloads %} / {{ s.max_downloads }}{% else %} / {{ ct('com_filesmanager.shares.unlimited') }}{% endif %}</td>
+        <td>
+          {% if s.revoked %}
+          <span class="badge bg-secondary">{{ ct('com_filesmanager.shares.revoked') }}</span>
+          {% elif s.expires_at and s.expires_at < now %}
+          <span class="badge bg-warning text-dark">{{ ct('com_filesmanager.shares.expired') }}</span>
+          {% else %}
+          <span class="badge bg-success">{{ ct('com_filesmanager.shares.active') }}</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          {% if not s.revoked %}
+          <form method="post" action="/admin/com_filesmanager/shares/revoke" class="d-inline"
+                onsubmit="return confirm('{{ ct('com_filesmanager.confirm.revoke') }}');">
+            <input type="hidden" name="share_id" value="{{ s.id }}">
+            <button class="btn btn-sm btn-outline-danger" type="submit">{{ ct('com_filesmanager.action.revoke') }}</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">{{ ct('com_filesmanager.empty.shares') }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

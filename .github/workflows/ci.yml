@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        env:
+          KLUCON_CI_TOKEN: ${{ secrets.KLUCON_CI_TOKEN }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff pytest build pytest-asyncio httpx aiosqlite sqlalchemy fastapi jinja2 pydantic pydantic-settings python-multipart itsdangerous PyJWT bcrypt email-validator
+          if [ "${GITHUB_REPOSITORY}" != "klucon/klucon-cms" ] && grep -R -E "klucon-cms|(^|[[:space:]])(from|import)[[:space:]]+src\." tests src >/dev/null 2>&1; then
+            if ! git clone --depth 1 https://github.com/klucon/klucon-cms.git "$HOME/klucon-cms"; then
+              if [ -z "${KLUCON_CI_TOKEN:-}" ]; then
+                echo "Set GitHub secret KLUCON_CI_TOKEN with read access to klucon/klucon-cms."
+                exit 1
+              fi
+              git -c http.https://github.com/.extraheader="AUTHORIZATION: bearer ${KLUCON_CI_TOKEN}" \
+                clone --depth 1 https://github.com/klucon/klucon-cms.git "$HOME/klucon-cms"
+            fi
+            (cd "$HOME/klucon-cms" && python -m pip install -e ".[dev]")
+          fi
+          if [ -f pyproject.toml ]; then
+            python -m pip install -e ".[dev]" || python -m pip install -e .
+          fi
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Validate JSON files
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          for path in sorted(Path(".").rglob("*.json")):
+              if any(part.startswith(".") for part in path.parts):
+                  continue
+              json.loads(path.read_text(encoding="utf-8"))
+          PY
+
+      - name: Compile
+        run: |
+          targets=()
+          [ -d src ] && targets+=(src)
+          [ -d tests ] && targets+=(tests)
+          [ "${#targets[@]}" -eq 0 ] || python -m compileall -q "${targets[@]}"
+
+      - name: Test
+        run: |
+          if [ -d tests ]; then
+            pytest -q
+          fi
+
+      - name: Build
+        run: |
+          if [ -f pyproject.toml ]; then
+            python -m build
+          fi

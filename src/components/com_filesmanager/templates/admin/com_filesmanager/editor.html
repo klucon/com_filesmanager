@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ ct('com_filesmanager.action.edit') }}{% endblock %}
+{% block heading %}{{ ct('com_filesmanager.text.editor_for', name=path) }}{% endblock %}
+
+{% block content %}
+{% if flash %}
+<div class="alert alert-{{ flash.type }} alert-dismissible mb-4" role="alert">
+  {{ flash.text }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{{ t('alert.close') }}"></button>
+</div>
+{% endif %}
+
+<form method="post" action="/admin/com_filesmanager/editor">
+  <input type="hidden" name="path" value="{{ path }}">
+  <div class="card">
+    <div class="card-body">
+      <textarea class="form-control font-monospace" name="content" rows="24" spellcheck="false"
+                style="white-space:pre; overflow-wrap:normal">{{ content }}</textarea>
+    </div>
+    <div class="card-footer d-flex gap-2">
+      <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.save') }}</button>
+      <a class="btn btn-outline-secondary" href="/admin/com_filesmanager?dir={{ parent | urlencode }}">{{ ct('com_filesmanager.action.cancel') }}</a>
+    </div>
+  </div>
+</form>
+{% endblock %}

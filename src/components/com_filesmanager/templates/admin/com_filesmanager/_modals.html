@@ -1,0 +1,165 @@
+{# Sdílené modály správce souborů. Očekává proměnnou `cur` (aktuální složka). #}
+
+{# Nová složka #}
+<div class="modal fade" id="fmNewFolder" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/folder">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.new_folder') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <label class="form-label">{{ ct('com_filesmanager.label.folder_name') }}</label>
+        <input class="form-control" type="text" name="name" required autofocus>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.create') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Upload (drag & drop) #}
+<div class="modal fade" id="fmUpload" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/upload" enctype="multipart/form-data">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.upload') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <div id="fm-dropzone" class="border border-2 border-dashed rounded p-4 text-center text-muted" style="cursor:pointer">
+          <i class="bi bi-cloud-arrow-up fs-2 d-block mb-2"></i>
+          {{ ct('com_filesmanager.label.drop_here') }}
+        </div>
+        <input id="fm-upload-input" class="form-control mt-2" type="file" name="files" multiple required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-success">{{ ct('com_filesmanager.action.upload') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Přesun #}
+<div class="modal fade" id="fmMove" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/move">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.move') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <label class="form-label">{{ ct('com_filesmanager.label.destination') }}</label>
+        <input class="form-control" type="text" name="dest" value="{{ cur }}">
+        <div class="form-text">{{ ct('com_filesmanager.label.destination_hint') }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.move') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Kopie #}
+<div class="modal fade" id="fmCopy" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/copy">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.copy') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <label class="form-label">{{ ct('com_filesmanager.label.destination') }}</label>
+        <input class="form-control" type="text" name="dest" value="{{ cur }}">
+        <div class="form-text">{{ ct('com_filesmanager.label.destination_hint') }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.copy') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ZIP #}
+<div class="modal fade" id="fmZip" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/zip">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.zip') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <label class="form-label">{{ ct('com_filesmanager.label.archive_name') }}</label>
+        <input class="form-control" type="text" name="archive_name" value="archiv.zip" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.zip') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Přejmenování #}
+<div class="modal fade" id="fmRename" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/rename">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.rename') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <input type="hidden" name="path" value="">
+        <label class="form-label">{{ ct('com_filesmanager.label.new_name') }}</label>
+        <input class="form-control" type="text" name="new_name" value="" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.rename') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# Sdílení #}
+<div class="modal fade" id="fmShare" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/admin/com_filesmanager/shares/create">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ ct('com_filesmanager.action.share') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('alert.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="dir" value="{{ cur }}">
+        <input type="hidden" name="path" value="">
+        <div class="mb-2">
+          <label class="form-label">{{ ct('com_filesmanager.label.expires_days') }} <span class="text-muted small">({{ ct('com_filesmanager.label.unlimited_hint') }})</span></label>
+          <input class="form-control" type="number" name="expires_days" value="7" min="0">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">{{ ct('com_filesmanager.label.max_downloads') }} <span class="text-muted small">({{ ct('com_filesmanager.label.unlimited_hint') }})</span></label>
+          <input class="form-control" type="number" name="max_downloads" value="0" min="0">
+        </div>
+        <div>
+          <label class="form-label">{{ ct('com_filesmanager.label.note') }} <span class="text-muted small">({{ ct('com_filesmanager.label.optional') }})</span></label>
+          <input class="form-control" type="text" name="note" value="">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ ct('com_filesmanager.action.cancel') }}</button>
+        <button type="submit" class="btn btn-primary">{{ ct('com_filesmanager.action.share') }}</button>
+      </div>
+    </form>
+  </div>
+</div>
