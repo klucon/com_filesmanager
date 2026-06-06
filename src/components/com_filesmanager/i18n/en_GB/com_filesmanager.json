@@ -104,9 +104,12 @@
   "com_filesmanager.error.move_into_self": "Cannot move {name} into itself.",
   "com_filesmanager.error.nothing_selected": "No items selected.",
   "com_filesmanager.error.too_large_to_edit": "{name} is too large to edit.",
+  "com_filesmanager.error.upload_too_large": "{name} exceeds the upload limit of {size}.",
+  "com_filesmanager.error.invalid_content_type": "{name} has an unexpected content type {content_type}.",
   "com_filesmanager.error.not_editable": "{name} cannot be edited as text.",
   "com_filesmanager.error.not_archive": "{name} is not a ZIP archive.",
   "com_filesmanager.error.unsafe_archive": "Archive contains an unsafe path: {name}.",
+  "com_filesmanager.error.archive_too_large": "Archive is too large to extract safely ({count} files, limit {size}).",
   "com_filesmanager.error.bad_archive": "{name} is a corrupted archive.",
   "com_filesmanager.error.share_file_only": "Only files can be shared, not folders.",
 

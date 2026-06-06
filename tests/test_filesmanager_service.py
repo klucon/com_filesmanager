@@ -12,7 +12,14 @@ from src.components.com_filesmanager.service import FileManagerError
 def root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     base = tmp_path / "files"
     base.mkdir()
-    monkeypatch.setattr(service, "get_root", lambda: base.resolve())
+    config = service.FileManagerConfig(
+        root=base.resolve(),
+        max_upload_bytes=1024 * 1024,
+        max_zip_members=10,
+        max_zip_total_bytes=1024 * 1024,
+        max_zip_ratio=50,
+    )
+    monkeypatch.setattr(service, "get_config", lambda: config)
     return base.resolve()
 
 
@@ -87,6 +94,22 @@ def test_text_editor(root: Path) -> None:
     assert (root / "config.ini").read_text() == "[b]\n"
 
 
+def test_upload_content_type_validation(root: Path) -> None:
+    with pytest.raises(FileManagerError):
+        service.save_upload(None, "report.pdf", b"%PDF-1.7", content_type="text/plain")
+
+
+def test_upload_size_limit(root: Path) -> None:
+    with pytest.raises(FileManagerError):
+        service.save_upload(None, "large.bin", b"x" * (1024 * 1024 + 1))
+
+
+def test_write_text_file_rejects_oversize_content(root: Path) -> None:
+    service.save_upload(None, "config.ini", b"ok")
+    with pytest.raises(FileManagerError):
+        service.write_text_file("config.ini", "x" * (service.MAX_EDIT_BYTES + 1))
+
+
 def test_zip_and_extract(root: Path) -> None:
     service.create_dir(None, "bundle")
     service.save_upload("bundle", "one.txt", b"1")
@@ -96,6 +119,35 @@ def test_zip_and_extract(root: Path) -> None:
     assert (root / "out.zip").exists()
     extracted = service.extract_zip("out.zip")
     assert (root / extracted).is_dir()
+
+
+def test_extract_zip_rejects_too_many_members(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    config = service.FileManagerConfig(
+        root=root,
+        max_upload_bytes=1024 * 1024,
+        max_zip_members=1,
+        max_zip_total_bytes=1024 * 1024,
+        max_zip_ratio=50,
+    )
+    monkeypatch.setattr(service, "get_config", lambda: config)
+    service.create_dir(None, "bundle")
+    service.save_upload("bundle", "one.txt", b"1")
+    service.save_upload("bundle", "two.txt", b"2")
+    archive = service.make_zip(["bundle"], None, "packed.zip")
+    with pytest.raises(FileManagerError):
+        service.extract_zip(archive)
+
+
+def test_extract_zip_rejects_high_compression_ratio(root: Path) -> None:
+    service.save_upload(None, "bomb.zip", b"PK\x03\x04")
+    import zipfile
+
+    archive = root / "bomb.zip"
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("huge.txt", b"a" * 200_000)
+
+    with pytest.raises(FileManagerError):
+        service.extract_zip("bomb.zip")
 
 
 def test_sandbox_escape_blocked(root: Path) -> None:

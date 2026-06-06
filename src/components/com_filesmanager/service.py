@@ -7,18 +7,23 @@ Veškeré operace jsou uzamčené (sandbox) do jednoho kořenového adresáře.
 from __future__ import annotations
 
 import json
+import mimetypes
 import secrets
 import shutil
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
 
 TRASH_DIRNAME = "_trash"
 DEFAULT_ROOT = Path("storage/files")
 
 MAX_EDIT_BYTES = 2 * 1024 * 1024  # 2 MB strop pro editor
+DEFAULT_MAX_UPLOAD_BYTES = 64 * 1024 * 1024
+DEFAULT_MAX_ZIP_MEMBERS = 1000
+DEFAULT_MAX_ZIP_TOTAL_BYTES = 256 * 1024 * 1024
+DEFAULT_MAX_ZIP_RATIO = 250
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico", ".avif"}
 ARCHIVE_EXTENSIONS = {".zip"}
@@ -40,8 +45,21 @@ except ModuleNotFoundError:
     def _get_settings() -> object:
         class _FallbackSettings:
             FILESMANAGER_DIR = DEFAULT_ROOT
+            FILESMANAGER_MAX_UPLOAD_BYTES = DEFAULT_MAX_UPLOAD_BYTES
+            FILESMANAGER_MAX_ZIP_MEMBERS = DEFAULT_MAX_ZIP_MEMBERS
+            FILESMANAGER_MAX_ZIP_TOTAL_BYTES = DEFAULT_MAX_ZIP_TOTAL_BYTES
+            FILESMANAGER_MAX_ZIP_RATIO = DEFAULT_MAX_ZIP_RATIO
 
         return _FallbackSettings()
+
+
+@dataclass(frozen=True, slots=True)
+class FileManagerConfig:
+    root: Path
+    max_upload_bytes: int = DEFAULT_MAX_UPLOAD_BYTES
+    max_zip_members: int = DEFAULT_MAX_ZIP_MEMBERS
+    max_zip_total_bytes: int = DEFAULT_MAX_ZIP_TOTAL_BYTES
+    max_zip_ratio: int = DEFAULT_MAX_ZIP_RATIO
 
 
 class FileManagerError(Exception):
@@ -92,10 +110,32 @@ class Listing:
 # Kořen a bezpečné cesty
 # --------------------------------------------------------------------------- #
 def get_root() -> Path:
+    return get_config().root
+
+
+def get_config() -> FileManagerConfig:
     settings = _get_settings()
-    root = Path(getattr(settings, "FILESMANAGER_DIR", DEFAULT_ROOT))
+    root = Path(getattr(settings, "FILESMANAGER_DIR", DEFAULT_ROOT)).resolve()
     root.mkdir(parents=True, exist_ok=True)
-    return root.resolve()
+    return FileManagerConfig(
+        root=root,
+        max_upload_bytes=max(
+            int(getattr(settings, "FILESMANAGER_MAX_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_BYTES)),
+            1,
+        ),
+        max_zip_members=max(
+            int(getattr(settings, "FILESMANAGER_MAX_ZIP_MEMBERS", DEFAULT_MAX_ZIP_MEMBERS)),
+            1,
+        ),
+        max_zip_total_bytes=max(
+            int(getattr(settings, "FILESMANAGER_MAX_ZIP_TOTAL_BYTES", DEFAULT_MAX_ZIP_TOTAL_BYTES)),
+            1,
+        ),
+        max_zip_ratio=max(
+            int(getattr(settings, "FILESMANAGER_MAX_ZIP_RATIO", DEFAULT_MAX_ZIP_RATIO)),
+            1,
+        ),
+    )
 
 
 def _trash_root() -> Path:
@@ -157,6 +197,10 @@ def _classify(path: Path) -> dict[str, object]:
         "is_archive": ext in ARCHIVE_EXTENSIONS,
         "can_preview": ext in PREVIEW_EXTENSIONS,
     }
+
+
+def _classify_name(name: str) -> dict[str, object]:
+    return _classify(Path(name))
 
 
 def _entry_from_path(path: Path) -> Entry:
@@ -254,15 +298,73 @@ def create_dir(rel_dir: str | None, name: str) -> str:
     return _to_rel(new_dir)
 
 
-def save_upload(rel_dir: str | None, filename: str, data: bytes, *, overwrite: bool = False) -> str:
+def save_upload(
+    rel_dir: str | None,
+    filename: str,
+    data: bytes,
+    *,
+    overwrite: bool = False,
+    content_type: str | None = None,
+) -> str:
     parent = resolve(rel_dir, must_exist=True)
     if not parent.is_dir():
         raise FileManagerError("com_filesmanager.error.not_a_dir", name=rel_dir or "/")
+    validate_upload(filename, data, content_type=content_type)
     target = parent / safe_name(filename)
     if target.exists() and not overwrite:
         target = _dedupe(target)
     target.write_bytes(data)
     return _to_rel(target)
+
+
+def validate_upload(filename: str, data: bytes, *, content_type: str | None = None) -> None:
+    config = get_config()
+    if len(data) > config.max_upload_bytes:
+        raise FileManagerError(
+            "com_filesmanager.error.upload_too_large",
+            name=filename,
+            size=human_size(config.max_upload_bytes),
+        )
+
+    guessed = _guess_upload_types(filename)
+    normalized = (content_type or "").split(";", 1)[0].strip().lower()
+    if not normalized or normalized == "application/octet-stream":
+        return
+    if guessed and normalized not in guessed:
+        raise FileManagerError(
+            "com_filesmanager.error.invalid_content_type",
+            name=filename,
+            content_type=normalized,
+        )
+
+
+def _guess_upload_types(filename: str) -> set[str]:
+    info = _classify_name(filename)
+    ext = str(info["ext"])
+    guessed: set[str] = set()
+    if ext == ".zip":
+        guessed.update({"application/zip", "application/x-zip-compressed"})
+    elif ext == ".pdf":
+        guessed.add("application/pdf")
+    elif bool(info["is_image"]):
+        mime, _ = mimetypes.guess_type(filename)
+        if mime:
+            guessed.add(mime)
+    elif bool(info["is_text"]):
+        mime, _ = mimetypes.guess_type(filename)
+        if mime:
+            guessed.add(mime)
+        guessed.update(
+            {
+                "text/plain",
+                "application/json",
+                "application/xml",
+                "application/x-yaml",
+                "text/yaml",
+                "application/toml",
+            }
+        )
+    return guessed
 
 
 def _dedupe(path: Path) -> Path:
@@ -465,9 +567,14 @@ def read_text_file(rel_path: str) -> str:
 
 def write_text_file(rel_path: str, content: str) -> str:
     source = resolve(rel_path, must_exist=True)
+    if not source.is_file():
+        raise FileManagerError("com_filesmanager.error.not_found", name=rel_path)
     if source.suffix.lower() not in TEXT_EXTENSIONS:
         raise FileManagerError("com_filesmanager.error.not_editable", name=source.name)
-    source.write_text(content, encoding="utf-8")
+    encoded = content.encode("utf-8")
+    if len(encoded) > MAX_EDIT_BYTES:
+        raise FileManagerError("com_filesmanager.error.too_large_to_edit", name=source.name)
+    source.write_bytes(encoded)
     return _to_rel(source)
 
 
@@ -505,14 +612,48 @@ def extract_zip(rel_path: str, *, into_subdir: bool = True) -> str:
     resolved_target = target_dir.resolve()
     try:
         with ZipFile(source) as zf:
-            for member in zf.namelist():
-                dest = (resolved_target / member).resolve()
-                if dest != resolved_target and resolved_target not in dest.parents:
-                    raise FileManagerError("com_filesmanager.error.unsafe_archive", name=member)
+            _validate_zip_members(zf, resolved_target)
             zf.extractall(resolved_target)
     except BadZipFile as exc:
         raise FileManagerError("com_filesmanager.error.bad_archive", name=source.name) from exc
     return _to_rel(target_dir)
+
+
+def _validate_zip_members(zf: ZipFile, resolved_target: Path) -> None:
+    config = get_config()
+    members = zf.infolist()
+    file_members = [member for member in members if not member.is_dir()]
+    if len(file_members) > config.max_zip_members:
+        raise FileManagerError(
+            "com_filesmanager.error.archive_too_large",
+            count=len(file_members),
+            size=human_size(config.max_zip_total_bytes),
+        )
+
+    total_size = 0
+    for member in file_members:
+        _validate_zip_destination(member, resolved_target)
+        total_size += member.file_size
+        if total_size > config.max_zip_total_bytes:
+            raise FileManagerError(
+                "com_filesmanager.error.archive_too_large",
+                count=len(file_members),
+                size=human_size(config.max_zip_total_bytes),
+            )
+        if (
+            member.compress_size > 0
+            and member.file_size / member.compress_size > config.max_zip_ratio
+        ):
+            raise FileManagerError("com_filesmanager.error.unsafe_archive", name=member.filename)
+
+
+def _validate_zip_destination(member: ZipInfo, resolved_target: Path) -> None:
+    dest = (resolved_target / member.filename).resolve()
+    if dest != resolved_target and resolved_target not in dest.parents:
+        raise FileManagerError("com_filesmanager.error.unsafe_archive", name=member.filename)
+    mode = (member.external_attr >> 16) & 0o170000
+    if mode == 0o120000:
+        raise FileManagerError("com_filesmanager.error.unsafe_archive", name=member.filename)
 
 
 # --------------------------------------------------------------------------- #

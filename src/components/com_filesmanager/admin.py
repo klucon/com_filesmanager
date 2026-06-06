@@ -65,7 +65,42 @@ async def _audit(
             detail=detail[:2000],
         )
     )
+
+
+def _request_meta(request: Request) -> str:
+    client_ip = request.client.host if request.client is not None else ""
+    user_agent = request.headers.get("user-agent", "").strip()
+    parts = []
+    if client_ip:
+        parts.append(f"ip={client_ip}")
+    if user_agent:
+        parts.append(f"ua={user_agent[:160]}")
+    return " ".join(parts)
+
+
+async def _commit_action(
+    request: Request,
+    db: AsyncSession,
+    user: object,
+    action: str,
+    *,
+    target: str = "",
+    detail: str = "",
+) -> None:
+    meta = _request_meta(request)
+    merged = " | ".join(part for part in (detail, meta) if part)
+    await _audit(db, user, action, target, merged)
     await db.commit()
+
+
+async def _handle_file_error(
+    request: Request,
+    db: AsyncSession,
+    ct,
+    exc: service.FileManagerError,
+) -> None:
+    await db.rollback()
+    _flash(request, "danger", ct(exc.key, **exc.params))
 
 
 # --------------------------------------------------------------------------- #
@@ -127,10 +162,10 @@ async def create_folder(
     ct = await _component_t(db)
     try:
         rel = service.create_dir(dir or None, name)
-        await _audit(db, user, "create_folder", rel)
+        await _commit_action(request, db, user, "create_folder", target=rel)
         _flash(request, "success", ct("com_filesmanager.success.folder_created", name=name))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -149,15 +184,27 @@ async def upload(
             if not upload_file.filename:
                 continue
             data = await upload_file.read()
-            service.save_upload(dir or None, upload_file.filename, data)
+            service.save_upload(
+                dir or None,
+                upload_file.filename,
+                data,
+                content_type=upload_file.content_type,
+            )
             saved += 1
         if saved:
-            await _audit(db, user, "upload", dir, f"{saved} soubor(ů)")
+            await _commit_action(
+                request,
+                db,
+                user,
+                "upload",
+                target=dir,
+                detail=f"{saved} soubor(ů)",
+            )
             _flash(request, "success", ct("com_filesmanager.success.uploaded", count=saved))
         else:
             _flash(request, "warning", ct("com_filesmanager.error.nothing_selected"))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -176,10 +223,10 @@ async def rename_entry(
     ct = await _component_t(db)
     try:
         rel = service.rename(path, new_name)
-        await _audit(db, user, "rename", rel, f"z {path}")
+        await _commit_action(request, db, user, "rename", target=rel, detail=f"z {path}")
         _flash(request, "success", ct("com_filesmanager.success.renamed", name=new_name))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -198,10 +245,10 @@ async def move_entries(
         for path in paths:
             service.move(path, dest or None)
             moved += 1
-        await _audit(db, user, "move", dest, f"{moved} položek")
+        await _commit_action(request, db, user, "move", target=dest, detail=f"{moved} položek")
         _flash(request, "success", ct("com_filesmanager.success.moved", count=moved))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -220,10 +267,10 @@ async def copy_entries(
         for path in paths:
             service.copy(path, dest or None)
             copied += 1
-        await _audit(db, user, "copy", dest, f"{copied} položek")
+        await _commit_action(request, db, user, "copy", target=dest, detail=f"{copied} položek")
         _flash(request, "success", ct("com_filesmanager.success.copied", count=copied))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -244,10 +291,17 @@ async def delete_entries(
         for path in paths:
             service.delete_to_trash(path)
             deleted += 1
-        await _audit(db, user, "delete", dir, f"{deleted} položek do koše")
+        await _commit_action(
+            request,
+            db,
+            user,
+            "delete",
+            target=dir,
+            detail=f"{deleted} položek do koše",
+        )
         _flash(request, "success", ct("com_filesmanager.success.deleted", count=deleted))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -318,10 +372,10 @@ async def editor_save(
     parent = path.rsplit("/", 1)[0] if "/" in path else ""
     try:
         service.write_text_file(path, content)
-        await _audit(db, user, "edit", path)
+        await _commit_action(request, db, user, "edit", target=path)
         _flash(request, "success", ct("com_filesmanager.success.saved", name=path))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(parent)
 
 
@@ -340,10 +394,10 @@ async def zip_entries(
     ct = await _component_t(db)
     try:
         rel = service.make_zip(paths, dir or None, archive_name)
-        await _audit(db, user, "zip", rel, f"{len(paths)} položek")
+        await _commit_action(request, db, user, "zip", target=rel, detail=f"{len(paths)} položek")
         _flash(request, "success", ct("com_filesmanager.success.zipped", name=rel))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -358,10 +412,10 @@ async def unzip_entry(
     ct = await _component_t(db)
     try:
         rel = service.extract_zip(path)
-        await _audit(db, user, "unzip", rel, f"z {path}")
+        await _commit_action(request, db, user, "unzip", target=rel, detail=f"z {path}")
         _flash(request, "success", ct("com_filesmanager.success.unzipped", name=rel))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -397,10 +451,10 @@ async def trash_restore(
     ct = await _component_t(db)
     try:
         rel = service.restore_from_trash(trash_id)
-        await _audit(db, user, "restore", rel)
+        await _commit_action(request, db, user, "restore", target=rel)
         _flash(request, "success", ct("com_filesmanager.success.restored", name=rel))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(suffix="/trash")
 
 
@@ -413,7 +467,7 @@ async def trash_delete(
 ) -> RedirectResponse:
     ct = await _component_t(db)
     service.delete_trash_item(trash_id)
-    await _audit(db, user, "purge", trash_id)
+    await _commit_action(request, db, user, "purge", target=trash_id)
     _flash(request, "success", ct("com_filesmanager.success.purged"))
     return _redirect(suffix="/trash")
 
@@ -426,7 +480,7 @@ async def trash_empty(
 ) -> RedirectResponse:
     ct = await _component_t(db)
     count = service.empty_trash()
-    await _audit(db, user, "empty_trash", "", f"{count} položek")
+    await _commit_action(request, db, user, "empty_trash", detail=f"{count} položek")
     _flash(request, "success", ct("com_filesmanager.success.trash_emptied", count=count))
     return _redirect(suffix="/trash")
 
@@ -485,11 +539,10 @@ async def share_create(
             max_downloads=max_downloads if max_downloads > 0 else None,
         )
         db.add(share)
-        await db.commit()
-        await _audit(db, user, "share_create", path)
+        await _commit_action(request, db, user, "share_create", target=path)
         _flash(request, "success", ct("com_filesmanager.success.share_created", name=path))
     except service.FileManagerError as exc:
-        _flash(request, "danger", ct(exc.key, **exc.params))
+        await _handle_file_error(request, db, ct, exc)
     return _redirect(dir)
 
 
@@ -506,8 +559,7 @@ async def share_revoke(
     ).scalar_one_or_none()
     if share is not None:
         share.revoked = True
-        await db.commit()
-        await _audit(db, user, "share_revoke", share.rel_path)
+        await _commit_action(request, db, user, "share_revoke", target=share.rel_path)
         _flash(request, "success", ct("com_filesmanager.success.share_revoked"))
     return _redirect(suffix="/shares")
 
@@ -543,6 +595,7 @@ async def audit_log(
 # --------------------------------------------------------------------------- #
 @public_router.get("/share/{token}")
 async def public_share(
+    request: Request,
     token: str,
     db: AsyncSession = Depends(get_db_session),
 ) -> Response:
@@ -562,5 +615,6 @@ async def public_share(
     if not target.is_file():
         return Response(status_code=404)
     share.download_count += 1
+    await _audit(db, share, "share_download", share.rel_path, _request_meta(request))
     await db.commit()
     return FileResponse(target, filename=target.name)

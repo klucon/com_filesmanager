@@ -104,9 +104,12 @@
   "com_filesmanager.error.move_into_self": "Nelze přesunout {name} do sebe sama.",
   "com_filesmanager.error.nothing_selected": "Nebyly vybrány žádné položky.",
   "com_filesmanager.error.too_large_to_edit": "{name} je příliš velký pro úpravu.",
+  "com_filesmanager.error.upload_too_large": "{name} překračuje limit nahrání {size}.",
+  "com_filesmanager.error.invalid_content_type": "{name} má neočekávaný typ obsahu {content_type}.",
   "com_filesmanager.error.not_editable": "{name} nelze upravovat jako text.",
   "com_filesmanager.error.not_archive": "{name} není ZIP archiv.",
   "com_filesmanager.error.unsafe_archive": "Archiv obsahuje nebezpečnou cestu: {name}.",
+  "com_filesmanager.error.archive_too_large": "Archiv je příliš velký pro bezpečné rozbalení ({count} souborů, limit {size}).",
   "com_filesmanager.error.bad_archive": "{name} je poškozený archiv.",
   "com_filesmanager.error.share_file_only": "Sdílet lze pouze soubory, ne složky.",
 
