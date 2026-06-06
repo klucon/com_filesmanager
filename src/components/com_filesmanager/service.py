@@ -13,9 +13,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from zipfile import BadZipFile, ZipFile, ZIP_DEFLATED
-
-from src.config import get_settings
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 TRASH_DIRNAME = "_trash"
 DEFAULT_ROOT = Path("storage/files")
@@ -34,6 +32,16 @@ TEXT_EXTENSIONS = {
 PREVIEW_EXTENSIONS = IMAGE_EXTENSIONS | {".pdf"}
 
 SORT_KEYS = {"name", "size", "modified", "type"}
+
+try:
+    from src.config import get_settings as _get_settings
+except ModuleNotFoundError:
+
+    def _get_settings() -> object:
+        class _FallbackSettings:
+            FILESMANAGER_DIR = DEFAULT_ROOT
+
+        return _FallbackSettings()
 
 
 class FileManagerError(Exception):
@@ -84,7 +92,7 @@ class Listing:
 # Kořen a bezpečné cesty
 # --------------------------------------------------------------------------- #
 def get_root() -> Path:
-    settings = get_settings()
+    settings = _get_settings()
     root = Path(getattr(settings, "FILESMANAGER_DIR", DEFAULT_ROOT))
     root.mkdir(parents=True, exist_ok=True)
     return root.resolve()

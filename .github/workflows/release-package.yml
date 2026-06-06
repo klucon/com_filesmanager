@@ -6,15 +6,31 @@ on:
       - "v*.*.*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   package:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" build
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Test
+        run: pytest -q
 
       - name: Validate manifest version
         run: |
@@ -59,8 +75,19 @@ jobs:
           print(out)
           PY
 
+      - name: Build wheel
+        run: python -m build
+
       - name: Generate checksum
         run: sha256sum com_filesmanager-*.zip > SHA256SUMS
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: com_filesmanager-package
+          path: |
+            com_filesmanager-*.zip
+            SHA256SUMS
+            dist/*
 
       - name: Upload release assets
         if: startsWith(github.ref, 'refs/tags/')

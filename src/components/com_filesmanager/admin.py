@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -7,17 +8,13 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.api.admin.deps import CurrentAdminUser
 from src.api.admin.render import admin_render
+from src.components.com_filesmanager import models, service
 from src.core.acl import require_admin_permission
 from src.core.system_settings import get_runtime_settings
 from src.core.templates import make_t
 from src.database.base import get_db_session
-
-from . import service
-from .models import FileAuditLog, FileShare
-from .service import FileManagerError
 
 router = APIRouter(
     prefix="/admin/com_filesmanager",
@@ -60,7 +57,7 @@ async def _audit(
     detail: str = "",
 ) -> None:
     db.add(
-        FileAuditLog(
+        models.FileAuditLog(
             user_id=getattr(user, "id", None),
             username=getattr(user, "username", "") or "",
             action=action,
@@ -90,10 +87,13 @@ async def index(
     try:
         if q.strip():
             search_results = service.search(q, dir or None)
-            listing = service.Listing(rel_dir=service._normalize_rel(dir), breadcrumbs=service.build_breadcrumbs(dir))
+            listing = service.Listing(
+                rel_dir=service._normalize_rel(dir),
+                breadcrumbs=service.build_breadcrumbs(dir),
+            )
         else:
             listing = service.list_dir(dir or None, sort=sort, desc=desc)
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
         listing = service.list_dir(None, sort=sort, desc=desc)
 
@@ -129,7 +129,7 @@ async def create_folder(
         rel = service.create_dir(dir or None, name)
         await _audit(db, user, "create_folder", rel)
         _flash(request, "success", ct("com_filesmanager.success.folder_created", name=name))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -156,7 +156,7 @@ async def upload(
             _flash(request, "success", ct("com_filesmanager.success.uploaded", count=saved))
         else:
             _flash(request, "warning", ct("com_filesmanager.error.nothing_selected"))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -178,7 +178,7 @@ async def rename_entry(
         rel = service.rename(path, new_name)
         await _audit(db, user, "rename", rel, f"z {path}")
         _flash(request, "success", ct("com_filesmanager.success.renamed", name=new_name))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -200,7 +200,7 @@ async def move_entries(
             moved += 1
         await _audit(db, user, "move", dest, f"{moved} položek")
         _flash(request, "success", ct("com_filesmanager.success.moved", count=moved))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -222,7 +222,7 @@ async def copy_entries(
             copied += 1
         await _audit(db, user, "copy", dest, f"{copied} položek")
         _flash(request, "success", ct("com_filesmanager.success.copied", count=copied))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -246,7 +246,7 @@ async def delete_entries(
             deleted += 1
         await _audit(db, user, "delete", dir, f"{deleted} položek do koše")
         _flash(request, "success", ct("com_filesmanager.success.deleted", count=deleted))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -258,7 +258,7 @@ async def delete_entries(
 async def download(path: str) -> Response:
     try:
         file_path, is_temp = service.resolve_download(path)
-    except FileManagerError:
+    except service.FileManagerError:
         return Response(status_code=404)
     filename = file_path.name if not is_temp else file_path.name
     return FileResponse(file_path, filename=filename, media_type="application/octet-stream")
@@ -268,7 +268,7 @@ async def download(path: str) -> Response:
 async def preview(path: str) -> Response:
     try:
         target = service.resolve(path, must_exist=True)
-    except FileManagerError:
+    except service.FileManagerError:
         return Response(status_code=404)
     if not target.is_file() or not service._classify(target)["can_preview"]:
         return Response(status_code=404)
@@ -288,7 +288,7 @@ async def editor(
     ct = await _component_t(db)
     try:
         content = service.read_text_file(path)
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
         parent = path.rsplit("/", 1)[0] if "/" in path else ""
         return _redirect(parent)
@@ -320,7 +320,7 @@ async def editor_save(
         service.write_text_file(path, content)
         await _audit(db, user, "edit", path)
         _flash(request, "success", ct("com_filesmanager.success.saved", name=path))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(parent)
 
@@ -342,7 +342,7 @@ async def zip_entries(
         rel = service.make_zip(paths, dir or None, archive_name)
         await _audit(db, user, "zip", rel, f"{len(paths)} položek")
         _flash(request, "success", ct("com_filesmanager.success.zipped", name=rel))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -360,7 +360,7 @@ async def unzip_entry(
         rel = service.extract_zip(path)
         await _audit(db, user, "unzip", rel, f"z {path}")
         _flash(request, "success", ct("com_filesmanager.success.unzipped", name=rel))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -399,7 +399,7 @@ async def trash_restore(
         rel = service.restore_from_trash(trash_id)
         await _audit(db, user, "restore", rel)
         _flash(request, "success", ct("com_filesmanager.success.restored", name=rel))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(suffix="/trash")
 
@@ -441,7 +441,9 @@ async def shares(
     db: AsyncSession = Depends(get_db_session),
 ) -> HTMLResponse:
     ct = await _component_t(db)
-    rows = (await db.execute(select(FileShare).order_by(FileShare.created_at.desc()))).scalars().all()
+    rows = (
+        await db.execute(select(models.FileShare).order_by(models.FileShare.created_at.desc()))
+    ).scalars().all()
     return await admin_render(
         "admin/com_filesmanager/shares.html",
         request=request,
@@ -469,11 +471,11 @@ async def share_create(
     try:
         target = service.resolve(path, must_exist=True)
         if not target.is_file():
-            raise FileManagerError("com_filesmanager.error.share_file_only", name=path)
+            raise service.FileManagerError("com_filesmanager.error.share_file_only", name=path)
         expires_at = None
         if expires_days > 0:
             expires_at = datetime.now(UTC) + timedelta(days=expires_days)
-        share = FileShare(
+        share = models.FileShare(
             token=service.new_share_token(),
             rel_path=path,
             note=note[:255],
@@ -486,7 +488,7 @@ async def share_create(
         await db.commit()
         await _audit(db, user, "share_create", path)
         _flash(request, "success", ct("com_filesmanager.success.share_created", name=path))
-    except FileManagerError as exc:
+    except service.FileManagerError as exc:
         _flash(request, "danger", ct(exc.key, **exc.params))
     return _redirect(dir)
 
@@ -499,7 +501,9 @@ async def share_revoke(
     db: AsyncSession = Depends(get_db_session),
 ) -> RedirectResponse:
     ct = await _component_t(db)
-    share = (await db.execute(select(FileShare).where(FileShare.id == share_id))).scalar_one_or_none()
+    share = (
+        await db.execute(select(models.FileShare).where(models.FileShare.id == share_id))
+    ).scalar_one_or_none()
     if share is not None:
         share.revoked = True
         await db.commit()
@@ -519,7 +523,9 @@ async def audit_log(
 ) -> HTMLResponse:
     ct = await _component_t(db)
     rows = (
-        await db.execute(select(FileAuditLog).order_by(FileAuditLog.created_at.desc()).limit(300))
+        await db.execute(
+            select(models.FileAuditLog).order_by(models.FileAuditLog.created_at.desc()).limit(300)
+        )
     ).scalars().all()
     return await admin_render(
         "admin/com_filesmanager/audit.html",
@@ -540,7 +546,9 @@ async def public_share(
     token: str,
     db: AsyncSession = Depends(get_db_session),
 ) -> Response:
-    share = (await db.execute(select(FileShare).where(FileShare.token == token))).scalar_one_or_none()
+    share = (
+        await db.execute(select(models.FileShare).where(models.FileShare.token == token))
+    ).scalar_one_or_none()
     if share is None or share.revoked:
         return Response(status_code=404)
     if share.expires_at is not None and share.expires_at < datetime.now(UTC):
@@ -549,7 +557,7 @@ async def public_share(
         return Response(status_code=410)
     try:
         target = service.resolve(share.rel_path, must_exist=True)
-    except FileManagerError:
+    except service.FileManagerError:
         return Response(status_code=404)
     if not target.is_file():
         return Response(status_code=404)

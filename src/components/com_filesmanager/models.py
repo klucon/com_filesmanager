@@ -22,7 +22,11 @@ class FileShare(Base):
     note: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_by_name: Mapped[str] = mapped_column(String(150), default="", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        nullable=False,
+    )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     max_downloads: Mapped[int | None] = mapped_column(Integer, nullable=True)
     download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -40,4 +44,8 @@ class FileAuditLog(Base):
     action: Mapped[str] = mapped_column(String(40), nullable=False)
     target: Mapped[str] = mapped_column(String(1024), default="", nullable=False)
     detail: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_now,
+        nullable=False,
+    )

@@ -1,0 +1,47 @@
+name: Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "24 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  secret-hygiene:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for committed private material
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          patterns=(
+            "-----BEGIN (RSA |DSA |EC |OPENSSH |PGP )?PRIVATE KEY-----"
+            "AWS_SECRET_ACCESS_KEY[[:space:]]*="
+            "GITHUB_TOKEN[[:space:]]*="
+            "DATABASE_URL[[:space:]]*=[^[:space:]]+://[^[:space:]]+:[^[:space:]@]+@"
+            "SECRET_KEY[[:space:]]*=[[:space:]]*['\"][^'\"]{24,}['\"]"
+          )
+
+          status=0
+          for pattern in "${patterns[@]}"; do
+            if git grep -I -n -E -e "$pattern" -- . \
+              ':!*.md' \
+              ':!*.example' \
+              ':!*.sample' \
+              ':!dist/*'; then
+              status=1
+            fi
+          done
+
+          if [[ "$status" -ne 0 ]]; then
+            echo "Potential committed secret or private key material found."
+            exit "$status"
+          fi
