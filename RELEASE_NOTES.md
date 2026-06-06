@@ -1,6 +1,5 @@
-# v0.1.2
+# v0.1.3
 
-Changes since `v0.1.1`:
+Changes since `v0.1.2`:
 
-- fix: add sqlalchemy runtime dependency
-- feat: turn filesmanager into download catalog
+- fix: relax filesmanager web response annotations
