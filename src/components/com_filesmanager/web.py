@@ -51,7 +51,7 @@ async def file_category(
     slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-) -> HTMLResponse | Response:
+) -> Response:
     locale = _locale(request)
     ct = await _ct(locale)
     category = await catalog.get_category_by_slug(db, slug)
@@ -77,7 +77,7 @@ async def file_detail(
     slug: str,
     request: Request,
     db: AsyncSession = Depends(get_db_session),
-) -> HTMLResponse | Response:
+) -> Response:
     locale = _locale(request)
     ct = await _ct(locale)
     item = await catalog.get_file_by_slug(db, slug)
